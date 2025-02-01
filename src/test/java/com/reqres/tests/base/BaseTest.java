@@ -6,10 +6,8 @@ public class BaseTest {
 
     @BeforeClass
     public static void setup() {
-        // Configura a URL base da API
         RestAssured.baseURI = "https://reqres.in/api";
 
-        // Configurações adicionais (opcional)
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
     }
 }
