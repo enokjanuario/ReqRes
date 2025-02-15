@@ -8,18 +8,24 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+
+import static com.reqres.tests.utils.Utils.getCellValueAsInt;
+import static com.reqres.tests.utils.Utils.getCellValueAsString;
 import static io.restassured.RestAssured.given;
 
 
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFRow;
-import org.apache.poi.xssf.usermodel.XSSFCell;
+
+import com.reqres.tests.utils.Utils;
 
 public class UserTests extends BaseTest {
+
 
     @Test
     public void testGetUser() {
@@ -174,14 +180,20 @@ public class UserTests extends BaseTest {
 
         for (int i = 1; i < rowCount; i++) {
             XSSFRow row = sheet.getRow(i);
-            data[i - 1][0] = row.getCell(0).getStringCellValue(); // email
-            data[i - 1][1] = row.getCell(1).getStringCellValue(); // password
-            data[i - 1][2] = (int) row.getCell(2).getNumericCellValue(); // expectedStatus
+            if (row == null) {
+                continue;
+            }
+
+            data[i - 1][0] = getCellValueAsString(row.getCell(0));
+            data[i - 1][1] = getCellValueAsString(row.getCell(1));
+            data[i - 1][2] = getCellValueAsInt(row.getCell(2));
+
         }
 
         workbook.close();
         file.close();
         return data;
     }
+
 
 }
