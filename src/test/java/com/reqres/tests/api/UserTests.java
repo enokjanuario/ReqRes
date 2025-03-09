@@ -8,7 +8,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -22,7 +21,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 
-import com.reqres.tests.utils.Utils;
 
 public class UserTests extends BaseTest {
 
@@ -143,7 +141,7 @@ public class UserTests extends BaseTest {
 
     @Test
     public void testUserSchemaValidation() {
-        File schemaFile = new File("src/test/resources/userSchema.json");
+        File schemaFile = new File("src/test/resources/schemas/userSchema.json");
 
         given()
                 .when()
@@ -171,12 +169,12 @@ public class UserTests extends BaseTest {
 
     @DataProvider(name = "loginData")
     public Object[][] getLoginData() throws IOException {
-        FileInputStream file = new FileInputStream("src/test/resources/testData.xlsx");
+        FileInputStream file = new FileInputStream("src/test/resources/files/testData.xlsx");
         XSSFWorkbook workbook = new XSSFWorkbook(file);
         XSSFSheet sheet = workbook.getSheetAt(0);
 
         int rowCount = sheet.getPhysicalNumberOfRows();
-        Object[][] data = new Object[rowCount - 1][3]; // Ignora o cabeçalho
+        Object[][] data = new Object[rowCount - 1][3];
 
         for (int i = 1; i < rowCount; i++) {
             XSSFRow row = sheet.getRow(i);
@@ -195,5 +193,73 @@ public class UserTests extends BaseTest {
         return data;
     }
 
+    @Test
+    public void testUsersPerPage() {
+        Response response = given()
+                .when()
+                .get("/users")
+                .then()
+                .extract()
+                .response();
+
+        int usersPerPage = response.jsonPath().getInt("per_page");
+        int totalUsers = response.jsonPath().getInt("total");
+        int totalPages = response.jsonPath().getInt("total_pages");
+
+        Assert.assertTrue(usersPerPage > 0, "[LOG] O número de usuários por página deve ser maior que 0.");
+        Assert.assertTrue(usersPerPage <= totalUsers, "[LOG] O número de usuários por página não pode ser maior que o total de usuários.");
+        Assert.assertEquals(totalPages, (int) Math.ceil((double) totalUsers / usersPerPage),
+                "[LOG] O número total de páginas deve ser consistente com o total de usuários e usuários por página.");
+    }
+
+    @Test
+    public void testListUsersSchemaValidation() {
+        File schemaFile = new File("src/test/resources/schemas/listUsersSchema.json");
+
+        given()
+                .when()
+                .get("/users")
+                .then()
+                .assertThat()
+                .body(JsonSchemaValidator.matchesJsonSchema(schemaFile));
+    }
+
+    @Test
+    public void testTotalPages() {
+        Response response = given()
+                .when()
+                .get("/users")
+                .then()
+                .extract()
+                .response();
+
+        int totalPages = response.jsonPath().getInt("total_pages");
+        int totalUsers = response.jsonPath().getInt("total");
+        int usersPerPage = response.jsonPath().getInt("per_page");
+
+        Assert.assertTrue(totalPages > 0, "[LOG] O número total de páginas deve ser maior que 0.");
+        Assert.assertEquals(totalPages, (int) Math.ceil((double) totalUsers / usersPerPage),
+                "[LOG] O número total de páginas deve ser consistente com o total de usuários e usuários por página.");
+    }
+
+    @Test
+    public void testPage3HasNoUsers() {
+        Response response = given()
+                .when()
+                .get("/users?page=3")
+                .then()
+                .extract()
+                .response();
+
+        int totalPages = response.jsonPath().getInt("total_pages");
+
+        if (totalPages < 3) {
+            Assert.assertTrue(response.jsonPath().getList("data").isEmpty(),
+                    "[LOG] A página 3 não deve conter usuários, pois não existe.");
+        } else {
+            Assert.assertFalse(response.jsonPath().getList("data").isEmpty(),
+                    "[LOG] A página 3 deve conter usuários.");
+        }
+    }
 
 }
